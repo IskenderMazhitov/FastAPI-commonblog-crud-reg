@@ -1,30 +1,16 @@
-from fastapi import FastAPI, Depends
-from pydantic import BaseModel
-from . import schemas, models
-from .database import Base, SessionLocal, engine
-from sqlalchemy.orm import Session
+from blog.router import authentication
+from fastapi import FastAPI
+from . import models
+from .database import engine
+from .router import blog, user, authentication
 
 app = FastAPI()
 
 models.Base.metadata.create_all(bind=engine)
 
-def get_db():
-    db = SessionLocal()
-    try: 
-        yield db
-    finally:
-        db.close()
+app.include_router(authentication.router)
 
-@app.post('/blog')
-def create(request: schemas.Blog, db : Session = Depends(get_db)):
-    new_blog = models.Blog(title=request.title, body=request.body)
-    db.add(new_blog)
-    db.commit()
-    db.refresh(new_blog)
-    return new_blog
+app.include_router(blog.router)
 
-@app.get('/blog')
-def all(db: Session = Depends(get_db)):
-    blogs = db.query(models.Blog).all()
-    return blogs 
+app.include_router(user.router)
 
